@@ -16,6 +16,7 @@ import AgentDetails from "./screen/AgentDetails";
 import FAQ from "./screen/FAQ";
 import Rules from "./screen/Rules";
 import ConvertWinning from "./screen/ConvertWinning"; // Import the new component
+import GamePlay from "./screen/GamePlay"; // Import the GamePlay component
 import MainHeader from "./common/Header";
 
 // Layout component that conditionally renders the header
@@ -34,9 +35,11 @@ const AppLayout = ({ children }) => {
     "/agent",
     "/faq",
     "/rules",
-    "/convert-winning"
+    "/convert-winning",
+    "/gameplay" // Add base path for gameplay to hide header
   ];
-  const shouldShowHeader = !hideHeaderPaths.includes(location.pathname);
+  // Check if the current path starts with any of the paths to hide
+  const shouldShowHeader = !hideHeaderPaths.some(path => location.pathname.startsWith(path));
   
   // Determine the active tab for footer highlighting
   const getActiveTab = () => {
@@ -79,6 +82,7 @@ function App() {
           <Route path="/chart" element={<ChartScreen />} />
           <Route path="/help" element={<HelpScreen />} />
           <Route path="/profile" element={<ProfileScreen onBack={() => <Navigate to="/home" />} />} />
+          <Route path="/gameplay/:gameName" element={<GamePlay />} />
         </Routes>
       </AppLayout>
     </Router>

@@ -223,6 +223,7 @@ const GamblingApp = () => {
                 <Button
                   type="primary"
                   style={{ background: '#5a189a', borderColor: '#5a189a', display: 'flex', alignItems: 'center' }}
+                  onClick={() => navigate('/gameplay/GALI')}
                 >
                   <PlayCircleOutlined style={{ marginRight: '4px' }} /> Play
                 </Button>
@@ -259,6 +260,7 @@ const GamblingApp = () => {
                 <Button
                   type="primary"
                   style={{ background: '#5a189a', borderColor: '#5a189a', display: 'flex', alignItems: 'center' }}
+                  onClick={() => navigate('/gameplay/DISAWAR')}
                 >
                   <PlayCircleOutlined style={{ marginRight: '4px' }} /> Play
                 </Button>
