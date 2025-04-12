@@ -17,6 +17,8 @@ import FAQ from "./screen/FAQ";
 import Rules from "./screen/Rules";
 import ConvertWinning from "./screen/ConvertWinning"; // Import the new component
 import GamePlay from "./screen/GamePlay"; // Import the GamePlay component
+import CrossPlay from "./screen/CrossPlay"; // Import the CrossPlay component
+import OpenPlay from "./screen/OpenPlay"; // Import the OpenPlay component
 import MainHeader from "./common/Header";
 
 // Layout component that conditionally renders the header
@@ -36,7 +38,9 @@ const AppLayout = ({ children }) => {
     "/faq",
     "/rules",
     "/convert-winning",
-    "/gameplay" // Add base path for gameplay to hide header
+    "/gameplay", // Add base path for gameplay to hide header
+    "/crossplay", // Add base path for crossplay to hide header
+    "/openplay" // <-- Add /openplay
   ];
   // Check if the current path starts with any of the paths to hide
   const shouldShowHeader = !hideHeaderPaths.some(path => location.pathname.startsWith(path));
@@ -83,6 +87,8 @@ function App() {
           <Route path="/help" element={<HelpScreen />} />
           <Route path="/profile" element={<ProfileScreen onBack={() => <Navigate to="/home" />} />} />
           <Route path="/gameplay/:gameName" element={<GamePlay />} />
+          <Route path="/crossplay" element={<CrossPlay />} />
+          <Route path="/openplay" element={<OpenPlay />} />
         </Routes>
       </AppLayout>
     </Router>
