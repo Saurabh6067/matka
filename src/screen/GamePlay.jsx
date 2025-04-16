@@ -35,11 +35,12 @@ const GamePlay = () => {
   const [withPalti, setWithPalti] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100); // Default to 100 (10 columns)
   const [totalBetAmount, setTotalBetAmount] = useState(0); // State for total bet
+  const [lastProcessedBets, setLastProcessedBets] = useState([]); // <-- Add state for last bets
 
   // Mock balance - replace with actual state management
   const balance = 49476;
 
-  // useEffect to process bets passed from CrossPlay
+  // useEffect to process bets passed from CrossPlay, OpenPlay, or AndarBahar
   useEffect(() => {
     // Only proceed if placedBets exists in the state
     if (location.state?.placedBets) {
@@ -53,16 +54,41 @@ const GamePlay = () => {
         return; // Stop processing
       }
 
+      // Store the valid incoming bets before processing
+      setLastProcessedBets(location.state.placedBets); // <-- Store the received bets
+
       const newBetAmounts = {};
       let processedSuccessfully = true; // Flag to track processing
 
       location.state.placedBets.forEach(bet => {
         // Validate each bet object
         if (bet && typeof bet.number !== 'undefined' && bet.number !== null && typeof bet.amount !== 'undefined' && bet.amount !== null) {
-          // Pad single-digit numbers like '1' to '01' to match grid keys
-          const numberStr = String(bet.number).padStart(2, '0');
+          let key = null; // Initialize key
+          const numberStr = String(bet.number);
           const amountStr = String(bet.amount);
-          newBetAmounts[numberStr] = amountStr;
+
+          // Check for Andar/Bahar format (e.g., "1A", "0B")
+          if (numberStr.endsWith('A') && numberStr.length === 2) {
+            const digit = numberStr.slice(0, 1);
+            if(!isNaN(parseInt(digit))) { // Check if the first char is a digit
+                 key = `ANDAR-${digit}`;
+            }
+          } else if (numberStr.endsWith('B') && numberStr.length === 2) {
+            const digit = numberStr.slice(0, 1);
+             if(!isNaN(parseInt(digit))) { // Check if the first char is a digit
+                 key = `BAHAR-${digit}`;
+             }
+          } else if (!isNaN(parseInt(numberStr))) {
+            // Assume it's a 2-digit number from Cross/Open Play
+            key = numberStr.padStart(2, '0');
+          } else {
+             console.warn("[GamePlay] Skipping unrecognized bet number format:", numberStr);
+          }
+
+          // If a valid key was determined, add it to the new amounts
+          if (key) {
+             newBetAmounts[key] = amountStr;
+          }
         } else {
           console.warn("[GamePlay] Skipping invalid bet object:", bet);
           processedSuccessfully = false; // Mark as potentially incomplete
@@ -98,14 +124,87 @@ const GamePlay = () => {
     setTotalBetAmount(total);
   }, [betAmounts]);
 
+  // useEffect to apply/update palti when the switch is toggled
+  useEffect(() => {
+    if (withPalti) {
+      console.log("[GamePlay] Palti switch turned ON. Applying palti to existing bets.");
+      setBetAmounts(prevAmounts => {
+        const newAmounts = { ...prevAmounts };
+        let changed = false;
+
+        Object.entries(prevAmounts).forEach(([key, amount]) => {
+          const currentAmount = parseInt(amount);
+          if (currentAmount > 0) {
+            const paltiKey = getPaltiKey(key);
+            if (paltiKey && paltiKey !== key) {
+              const paltiAmount = parseInt(prevAmounts[paltiKey] || '0');
+              // If palti exists but has different amount, or doesn't exist, update it
+              if (isNaN(paltiAmount) || paltiAmount !== currentAmount) {
+                 console.log(` -> Applying palti: Setting ${paltiKey} to ${amount} (was ${paltiAmount})`);
+                 newAmounts[paltiKey] = String(amount); // Keep amount as string
+                 changed = true;
+              }
+            }
+          }
+        });
+
+        // Only update state if changes were actually made
+        return changed ? newAmounts : prevAmounts;
+      });
+    } else {
+        console.log("[GamePlay] Palti switch turned OFF. Removing assumed auto-palti amounts.");
+        setBetAmounts(prevAmounts => {
+            const newAmounts = { ...prevAmounts };
+            let changed = false;
+
+            Object.entries(prevAmounts).forEach(([key, amount]) => {
+                 // Ensure amount is valid before proceeding
+                 if (!amount || parseInt(amount) <= 0) return;
+
+                 const paltiKey = getPaltiKey(key);
+
+                 // Ensure palti is valid, different, and key < paltiKey numerically to process pairs only once
+                 if (paltiKey && paltiKey !== key && parseInt(key) < parseInt(paltiKey)) {
+                    // Check if the palti has the exact same amount in the *previous* state
+                    if (prevAmounts[paltiKey] === amount) {
+                        console.log(` -> Removing palti: Clearing ${paltiKey} (was ${amount}, matched ${key})`);
+                        newAmounts[paltiKey] = ''; // Clear the palti amount in the new state
+                        changed = true;
+                    }
+                 }
+            });
+
+            return changed ? newAmounts : prevAmounts; // Update only if changes were made
+        });
+    }
+  }, [withPalti]); // Dependency: Run when withPalti changes
+
+  // Helper function to get the palti key for a 2-digit number string
+  const getPaltiKey = (numStr) => {
+    if (typeof numStr === 'string' && numStr.length === 2 && /^\d+$/.test(numStr)) {
+      return numStr[1] + numStr[0];
+    }
+    return null; // Return null if not a 2-digit string
+  };
+
   // Handle changes in bet input fields
   const handleBetChange = (numberKey, value) => {
-    // Allow only digits, limit length if desired
     const numericValue = value.replace(/[^0-9]/g, '');
-    setBetAmounts(prev => ({
-      ...prev,
-      [numberKey]: numericValue,
-    }));
+
+    setBetAmounts(prev => {
+      const newAmounts = { ...prev, [numberKey]: numericValue };
+
+      // Apply palti logic if the switch is on
+      if (withPalti) {
+        const paltiKey = getPaltiKey(numberKey);
+        // Ensure paltiKey is valid and different from the original key
+        if (paltiKey && paltiKey !== numberKey) {
+          console.log(`Palti detected: ${numberKey} -> ${paltiKey}, Amount: ${numericValue}`); // Debug Log
+          newAmounts[paltiKey] = numericValue;
+        }
+      }
+      return newAmounts;
+    });
   };
 
   // Calculate number of columns based on zoom level
@@ -306,15 +405,15 @@ const GamePlay = () => {
       </Header>
 
       {/* Content Area */}
-      <Content style={{ padding: '80px 0 16px 0' }}> {/* Removed horizontal padding */}
+      <Content style={{ padding: '80px 0 80px 0' }}> {/* Increased bottom padding to 80px */}
          {/* Top Action Buttons */}
          <Row gutter={[8, 8]} style={{ marginBottom: '16px', padding: '0 5px' }}> {/* Keep padding for buttons */}
            <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}} onClick={() => navigate('/crossplay', { state: { gameName: gameName } })}>CROSSING</Button></Col>
            <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}} onClick={() => navigate('/openplay', { state: { gameName: gameName } })}>OPEN PLAY</Button></Col>
-           <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}}>COPY PASTE</Button></Col>
-           <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}}>HARUF</Button></Col>
-           <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}}>FROM INTO</Button></Col>
-           <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}}>REPEAT</Button></Col>
+           <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}} onClick={() => navigate('/copypaste', { state: { gameName: gameName } })}>COPY PASTE</Button></Col>
+           <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}} onClick={() => navigate('/andarbahar', { state: { gameName: gameName } })}>HARUF</Button></Col>
+           <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}} onClick={() => navigate('/frominto', { state: { gameName: gameName } })}>FROM INTO</Button></Col>
+           <Col span={8}><Button block style={{backgroundColor: '#5a189a', color: 'white'}} onClick={() => navigate('/repeat', { state: { gameName: gameName, lastBets: lastProcessedBets } })}>REPEAT</Button></Col>
          </Row>
 
          {/* Zoom Slider and Palti Switch */} 

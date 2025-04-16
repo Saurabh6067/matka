@@ -19,7 +19,11 @@ import ConvertWinning from "./screen/ConvertWinning"; // Import the new componen
 import GamePlay from "./screen/GamePlay"; // Import the GamePlay component
 import CrossPlay from "./screen/CrossPlay"; // Import the CrossPlay component
 import OpenPlay from "./screen/OpenPlay"; // Import the OpenPlay component
+import AndarBahar from "./screen/AndarBahar"; // Import the AndarBahar component
 import MainHeader from "./common/Header";
+import FromInto from './screen/FromInto'; // <-- Import FromInto
+import Repeat from './screen/Repeat'; // <-- Import Repeat
+import CopyPaste from './screen/CopyPaste'; // <-- Import CopyPaste
 
 // Layout component that conditionally renders the header
 const AppLayout = ({ children }) => {
@@ -40,7 +44,11 @@ const AppLayout = ({ children }) => {
     "/convert-winning",
     "/gameplay", // Add base path for gameplay to hide header
     "/crossplay", // Add base path for crossplay to hide header
-    "/openplay" // <-- Add /openplay
+    "/openplay", // <-- Add /openplay
+    "/andarbahar", // <-- Add /andarbahar
+    "/frominto", // <-- Add /frominto
+    "/repeat", // <-- Add /repeat
+    "/copypaste" // <-- Add /copypaste
   ];
   // Check if the current path starts with any of the paths to hide
   const shouldShowHeader = !hideHeaderPaths.some(path => location.pathname.startsWith(path));
@@ -89,6 +97,10 @@ function App() {
           <Route path="/gameplay/:gameName" element={<GamePlay />} />
           <Route path="/crossplay" element={<CrossPlay />} />
           <Route path="/openplay" element={<OpenPlay />} />
+          <Route path="/andarbahar" element={<AndarBahar />} />
+          <Route path="/frominto" element={<FromInto />} />
+          <Route path="/repeat" element={<Repeat />} />
+          <Route path="/copypaste" element={<CopyPaste />} />
         </Routes>
       </AppLayout>
     </Router>
